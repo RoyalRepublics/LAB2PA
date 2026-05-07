@@ -1,0 +1,45 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 25
+      uses: actions/setup-java@v3
+      with:
+        java-version: '25'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build with Maven
+      run: mvn clean install
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Download artifact
+      # Since we're doing this in a new job, the target folder is empty.
+      # To keep it simple as per instructions, we just rebuild it or run `mvn package` again.
+      # Alternatively, we could upload/download the artifact between jobs.
+      # The instructions say "Deploy (Mínimo viable): Configurar el despliegue automático. Se prefiere fuertemente el despliegue utilizando el contenedor Docker creado en la Fase 1"
+      # To build the docker container, we need the jar. Let's just build the jar again to save artifact passing complexity, or pass it.
+      # I will just run `mvn clean package -DskipTests` to get the jar quickly, then build the docker image.
+      run: mvn clean package -DskipTests
+
+    - name: Build Docker image
+      run: docker build -t lab-streams-api:latest .
